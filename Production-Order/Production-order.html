@@ -1,0 +1,1911 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Production Order Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #f0f2f5;
+      --sur: #fff;
+      --sur2: #f7f8fa;
+      --bdr: #dde1e7;
+      --blue: #1a6fc4;
+      --green: #1e9e57;
+      --amber: #d97706;
+      --red: #d93025;
+      --text: #1a1d23;
+      --muted: #4b5563;
+      --dim: #9ca3af;
+      --r: 8px;
+      --sh: 0 2px 10px rgba(0, 0, 0, .07);
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0
+    }
+
+    html,
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 14px
+    }
+
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px
+    }
+
+    ::-webkit-scrollbar-track {
+      background: var(--sur2)
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--bdr);
+      border-radius: 3px
+    }
+
+    #hdr {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--sur);
+      border-bottom: 2px solid var(--blue);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-shadow: var(--sh);
+      min-height: 62px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px
+    }
+
+    .bico {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #1a6fc4, #0d4f9e);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 17px;
+      flex-shrink: 0;
+      color: #fff
+    }
+
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap
+    }
+
+    .brand h1 span {
+      color: var(--blue)
+    }
+
+    .hdr-r {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .tspill {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--sur2);
+      border: 1px solid var(--bdr);
+      padding: 4px 10px;
+      border-radius: 20px;
+      white-space: nowrap
+    }
+
+    .tspill strong {
+      color: var(--blue)
+    }
+
+    .upl-btn {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      border: none;
+      padding: 7px 13px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      font-weight: 700;
+      transition: all .2s;
+      white-space: nowrap;
+    }
+
+    .upl-btn:hover {
+      opacity: .85
+    }
+
+    .upl-pend {
+      background: #dbeafe;
+      color: #1e40af;
+      border: 1px solid #bfdbfe
+    }
+
+    .upl-comp {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a
+    }
+
+    .upl-pend.loaded {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue)
+    }
+
+    .upl-comp.loaded {
+      background: var(--amber);
+      color: #fff;
+      border-color: var(--amber)
+    }
+
+    #nav {
+      background: var(--sur);
+      border-bottom: 1px solid var(--bdr);
+      display: flex;
+      align-items: flex-end;
+      padding: 0 20px;
+      gap: 2px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .04);
+      overflow-x: auto;
+    }
+
+    .tab {
+      padding: 10px 16px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--dim);
+      border-bottom: 3px solid transparent;
+      transition: color .15s, border-color .15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      user-select: none;
+      white-space: nowrap;
+      height: 46px;
+    }
+
+    .tab:hover {
+      color: var(--blue)
+    }
+
+    .tab.on {
+      color: var(--blue);
+      border-bottom-color: var(--blue)
+    }
+
+    .tn {
+      width: 19px;
+      height: 19px;
+      border-radius: 50%;
+      background: var(--sur2);
+      border: 1px solid var(--bdr);
+      font-size: 10px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dim);
+      transition: all .15s;
+      flex-shrink: 0
+    }
+
+    .tab.on .tn {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue)
+    }
+
+    .pg {
+      display: none;
+      padding: 20px;
+      animation: fadein .2s ease
+    }
+
+    .pg.on {
+      display: block
+    }
+
+    @keyframes fadein {
+      from {
+        opacity: 0;
+        transform: translateY(4px)
+      }
+
+      to {
+        opacity: 1;
+        transform: none
+      }
+    }
+
+    .card {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 18px;
+      margin-bottom: 18px;
+      box-shadow: var(--sh)
+    }
+
+    .ct {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .7px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap
+    }
+
+    .ct::before {
+      content: '';
+      width: 3px;
+      height: 13px;
+      background: var(--blue);
+      border-radius: 2px;
+      flex-shrink: 0
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--bdr);
+      border-radius: var(--r);
+      padding: 48px 20px;
+      text-align: center;
+      margin-bottom: 18px;
+      background: var(--sur);
+    }
+
+    .upload-zone .uz-icon {
+      font-size: 36px;
+      margin-bottom: 12px
+    }
+
+    .upload-zone h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-bottom: 6px
+    }
+
+    .upload-zone p {
+      font-size: 12px;
+      color: var(--dim);
+      margin-bottom: 18px;
+      line-height: 1.6
+    }
+
+    .uz-btns {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap
+    }
+
+    .kpi-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px
+    }
+
+    .kpi {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      flex: 1;
+      min-width: 110px;
+      box-shadow: var(--sh);
+      border-top: 3px solid var(--bdr)
+    }
+
+    .kpi.pend {
+      border-top-color: var(--blue)
+    }
+
+    .kpi.cncl {
+      border-top-color: var(--red)
+    }
+
+    .kpi.unrl {
+      border-top-color: var(--amber)
+    }
+
+    .kpi.prog {
+      border-top-color: var(--amber)
+    }
+
+    .kpi.comp {
+      border-top-color: var(--green)
+    }
+
+    .kpi.total {
+      border-top-color: #7c3aed
+    }
+
+    .kpi .kl {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 3px
+    }
+
+    .kpi .kv {
+      font-size: 22px;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .kpi.pend .kv {
+      color: var(--blue)
+    }
+
+    .kpi.prog .kv {
+      color: var(--amber)
+    }
+
+    .kpi.comp .kv {
+      color: var(--green)
+    }
+
+    .kpi.total .kv {
+      color: #7c3aed
+    }
+
+    .kpi .ks {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 3px
+    }
+
+    .ubox-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 18px
+    }
+
+    .ubox {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 14px 16px;
+      flex: 1;
+      min-width: 150px;
+      box-shadow: var(--sh);
+      border-top: 3px solid var(--bdr)
+    }
+
+    .ubox-TRD {
+      border-top-color: #1a6fc4
+    }
+
+    .ubox-IMD {
+      border-top-color: #1e9e57
+    }
+
+    .ubox-DCD {
+      border-top-color: #d97706
+    }
+
+    .ubox-X {
+      border-top-color: #7c3aed
+    }
+
+    .ubox .uname {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 10px;
+      letter-spacing: .3px
+    }
+
+    .ubox .ustats {
+      display: flex;
+      gap: 6px
+    }
+
+    .ubox .ustat {
+      flex: 1;
+      text-align: center;
+      padding: 6px 4px;
+      border-radius: 5px;
+      background: var(--sur2)
+    }
+
+    .ubox .ustat .uv {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .ubox .ustat .ul {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-top: 2px;
+      letter-spacing: .3px
+    }
+
+    .ubox .ustat.pend {
+      background: #eff6ff
+    }
+
+    .ubox .ustat.pend .uv {
+      color: var(--blue)
+    }
+
+    .ubox .ustat.prog {
+      background: #fffbeb
+    }
+
+    .ubox .ustat.prog .uv {
+      color: var(--amber)
+    }
+
+    .ubox .ustat.comp {
+      background: #f0fdf4
+    }
+
+    .ubox .ustat.comp .uv {
+      color: var(--green)
+    }
+
+    .cg2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px
+    }
+
+    .cg3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 18px;
+      margin-bottom: 18px
+    }
+
+    @media(max-width:1100px) {
+      .cg3 {
+        grid-template-columns: 1fr 1fr
+      }
+    }
+
+    @media(max-width:750px) {
+
+      .cg2,
+      .cg3 {
+        grid-template-columns: 1fr
+      }
+    }
+
+    .cbox {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 18px;
+      box-shadow: var(--sh)
+    }
+
+    .cbox canvas {
+      max-height: 270px
+    }
+
+    .cbox-wide {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 18px;
+      box-shadow: var(--sh);
+      margin-bottom: 18px
+    }
+
+    .cbox-wide canvas {
+      max-height: 300px
+    }
+
+    .fr {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 18px
+    }
+
+    .fg {
+      display: flex;
+      flex-direction: column;
+      gap: 4px
+    }
+
+    .fg label {
+      font-size: 10px;
+      color: var(--dim);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      font-weight: 700
+    }
+
+    select {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      color: var(--text);
+      padding: 7px 26px 7px 10px;
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 13px;
+      cursor: pointer;
+      min-width: 130px;
+      outline: none;
+      transition: border-color .2s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    select:focus {
+      border-color: var(--blue)
+    }
+
+    select:disabled {
+      opacity: .4;
+      cursor: not-allowed
+    }
+
+    .mstrip {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px
+    }
+
+    .mc {
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      border-radius: var(--r);
+      padding: 10px 12px;
+      flex: 1;
+      min-width: 120px;
+      box-shadow: var(--sh)
+    }
+
+    .mc .mm {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: .4px;
+      margin-bottom: 8px
+    }
+
+    .mc .mvals {
+      display: flex;
+      gap: 6px
+    }
+
+    .mc .mval {
+      flex: 1;
+      text-align: center
+    }
+
+    .mc .mval .mv {
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1
+    }
+
+    .mc .mval .ml {
+      font-size: 9px;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-top: 1px
+    }
+
+    .mc .mval.pend .mv {
+      color: var(--blue)
+    }
+
+    .mc .mval.prog .mv {
+      color: var(--amber)
+    }
+
+    .mc .mval.comp .mv {
+      color: var(--green)
+    }
+
+    .tw {
+      overflow-x: auto;
+      border-radius: var(--r);
+      border: 1px solid var(--bdr)
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px
+    }
+
+    thead tr {
+      background: var(--sur2)
+    }
+
+    thead th {
+      padding: 9px 11px;
+      text-align: left;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: .4px;
+      border-bottom: 1px solid var(--bdr);
+      white-space: nowrap
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--bdr);
+      transition: background .1s
+    }
+
+    tbody tr:last-child {
+      border-bottom: none
+    }
+
+    tbody tr:hover {
+      background: #f5f8ff
+    }
+
+    tbody td {
+      padding: 8px 11px;
+      vertical-align: middle
+    }
+
+    tfoot td {
+      padding: 8px 11px;
+      background: var(--sur2);
+      font-weight: 700;
+      color: var(--blue);
+      border-top: 2px solid var(--bdr)
+    }
+
+    .nr {
+      text-align: right;
+      font-variant-numeric: tabular-nums
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700
+    }
+
+    .badge.pend {
+      background: #dbeafe;
+      color: #1e40af
+    }
+
+    .badge.cncl {
+      background: #fee2e2;
+      color: #dc2626
+    }
+
+    .badge.unrl {
+      background: #fef3c7;
+      color: #92400e
+    }
+
+    .badge.prog {
+      background: #fef3c7;
+      color: #92400e
+    }
+
+    .badge.comp {
+      background: #d1fae5;
+      color: #065f46
+    }
+
+    .pager {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 12px;
+      flex-wrap: wrap
+    }
+
+    .pager button {
+      background: var(--sur2);
+      border: 1px solid var(--bdr);
+      color: var(--muted);
+      padding: 4px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 12px;
+      transition: all .12s
+    }
+
+    .pager button:hover:not(:disabled) {
+      background: var(--bdr);
+      color: var(--text)
+    }
+
+    .pager button:disabled {
+      opacity: .35;
+      cursor: not-allowed
+    }
+
+    .pager button.cur {
+      background: var(--blue);
+      color: #fff;
+      border-color: var(--blue);
+      font-weight: 700
+    }
+
+    .pager .pi {
+      font-size: 11px;
+      color: var(--dim);
+      margin-left: 4px
+    }
+
+    .empty {
+      text-align: center;
+      padding: 40px 16px;
+      color: var(--dim)
+    }
+
+    .empty .ei {
+      font-size: 32px;
+      margin-bottom: 8px
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      z-index: 9999;
+      background: var(--sur);
+      border: 1px solid var(--bdr);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--text);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .12);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .3s, transform .3s;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 400px;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: none
+    }
+
+    #toast .td {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0
+    }
+
+    #toast.ok .td {
+      background: var(--green)
+    }
+
+    #toast.er .td {
+      background: var(--red)
+    }
+
+    #toast.in .td {
+      background: var(--blue)
+    }
+
+    @media(max-width:640px) {
+      #hdr {
+        padding: 8px 12px
+      }
+
+      #nav {
+        padding: 0 8px
+      }
+
+      .pg {
+        padding: 12px
+      }
+
+      .tab {
+        padding: 8px 10px;
+        font-size: 12px
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header id="hdr">
+    <div class="brand">
+      <div class="bico">&#9881;</div>
+      <h1>Production Order <span>Dashboard</span></h1>
+    </div>
+    <div class="hdr-r">
+      <div class="tspill">Updated: <strong id="tsLbl">—</strong></div>
+    </div>
+  </header>
+
+  <nav id="nav">
+    <div class="tab on" onclick="goTab(0)"><span class="tn">1</span>Overview</div>
+    <div class="tab" onclick="goTab(1)"><span class="tn">2</span>Details</div>
+    <div class="tab" onclick="goTab(2)"><span class="tn">3</span>Charts</div>
+  </nav>
+
+  <!-- TAB 1 — OVERVIEW -->
+  <div class="pg on" id="pg0">
+    <div id="pg0-upload" class="upload-zone" style="display:none;">
+      <div class="uz-icon">&#128202;</div>
+      <h3>&#128260; Auto-loading Excel files...</h3>
+      <p>Loading Complete order.xlsx &amp; production-order.xlsx<br><small>Fallback: Manual upload buttons below</small>
+      </p>
+      <div class="uz-btns">
+        <button class="upl-btn upl-comp" id="btnComp" onclick="document.getElementById('fiC').click()">&#128202; Load
+          Complete Orders</button>
+        <input type="file" id="fiC" accept=".xlsx,.xls" onchange="onFile(event)" style="display:none" />
+        <button class="upl-btn upl-pend" id="btnPend" onclick="document.getElementById('fiP').click()">&#9203; Load
+          Pending Orders</button>
+        <input type="file" id="fiP" accept=".xlsx,.xls" onchange="onFile(event)" style="display:none" />
+      </div>
+    </div>
+
+    <div id="pg0-body" style="display:none">
+      <div class="card">
+        <div class="ct">Filters </div>
+        <div class="fr" id="pg0Filters">
+          <div class="fg"><label>Unit</label><select id="f0Unit" onchange="renderOverview()">
+              <option value="all">All Units</option>
+            </select></div>
+          <div class="fg"><label>Year</label><select id="f0Year" onchange="renderOverview()">
+              <option value="all">All Years</option>
+            </select></div>
+          <div class="fg"><label>Month</label><select id="f0Month" onchange="renderOverview()">
+              <option value="all">All Months</option>
+            </select></div>
+          <div class="fg"><label>Day</label><select id="f0Day" onchange="renderOverview()">
+              <option value="all">All Days</option>
+            </select></div>
+        </div>
+      </div>
+      <div class="kpi-row" id="kpiRow"></div>
+      <div class="ubox-row" id="unitBoxes"></div>
+      <div class="cg2">
+        <div class="cbox">
+          <div class="ct">Status Distribution</div><canvas id="cOvDonut"></canvas>
+        </div>
+        <div class="cbox">
+          <div class="ct">Unit-wise Orders</div><canvas id="cOvUnitBar"></canvas>
+        </div>
+      </div>
+      <div class="cg2">
+        <div class="cbox">
+          <div class="ct">Unit Status</div><canvas id="cOvUnitStatus"></canvas>
+        </div>
+        <div class="cbox">
+          <div class="ct">Year-wise</div><canvas id="cOvYearBar"></canvas>
+        </div>
+      </div>
+      <div class="cg2">
+        <div class="cbox">
+          <div class="ct">Month-wise</div><canvas id="cOvMonthBar"></canvas>
+        </div>
+        <div class="cbox">
+          <div class="ct">Day-wise</div><canvas id="cOvDayBar"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2 — DETAILS -->
+  <div class="pg" id="pg1">
+    <div class="card">
+      <div class="ct">Filter Records</div>
+      <div class="fr">
+        <div class="fg"><label>Unit</label>
+          <select id="f3Unit" onchange="renderDetails()">
+            <option value="all">All Units</option>
+          </select>
+        </div>
+        <div class="fg"><label>Year</label>
+          <select id="f3Year" onchange="renderDetails()">
+            <option value="all">All Years</option>
+          </select>
+        </div>
+        <div class="fg"><label>Month</label>
+          <select id="f3Month" onchange="renderDetails()">
+            <option value="all">All Months</option>
+          </select>
+        </div>
+        <div class="fg"><label>Day</label>
+          <select id="f3Day" onchange="renderDetails()">
+            <option value="all">All Days</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ct" id="detailTitle">All Orders</div>
+      <div class="tw">
+        <table>
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Order No</th>
+              <th>Order Date</th>
+              <th>Item</th>
+              <th>Item Description</th>
+              <th>Process</th>
+              <th class="nr">Queue Qty</th>
+            </tr>
+          </thead>
+          <tbody id="detailTB"></tbody>
+          <tfoot id="detailTF"></tfoot>
+        </table>
+      </div>
+      <div class="pager" id="detailPgr"></div>
+    </div>
+  </div>
+
+  <!-- TAB 3 — CHARTS -->
+  <div class="pg" id="pg2">
+    <div class="card">
+      <div class="ct">Filters</div>
+      <div class="fr">
+        <div class="fg"><label>Unit</label>
+          <select id="f4Unit" onchange="renderChartsTab()">
+            <option value="all">All Units</option>
+          </select>
+        </div>
+        <div class="fg"><label>Year</label>
+          <select id="f4Year" onchange="renderChartsTab()">
+            <option value="all">All Years</option>
+          </select>
+        </div>
+        <div class="fg"><label>Month</label>
+          <select id="f4Month" onchange="renderChartsTab()">
+            <option value="all">All Months</option>
+          </select>
+        </div>
+
+        <div class="fg"><label>Day</label>
+          <select id="f4Day" onchange="renderChartsTab()">
+            <option value="all">All Days</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="cg3">
+      <div class="cbox">
+        <div class="ct">Overall Status Split</div><canvas id="cC1"></canvas>
+      </div>
+      <div class="cbox">
+        <div class="ct">Unit-wise Status Comparison</div><canvas id="cC2"></canvas>
+      </div>
+      <div class="cbox">
+        <div class="ct">In Progress by Unit</div><canvas id="cC5"></canvas>
+      </div>
+    </div>
+    <div class="cg2">
+      <div class="cbox">
+        <div class="ct">Monthly — Pending vs Completed</div><canvas id="cC4"></canvas>
+      </div>
+      <div class="cbox">
+        <div class="ct">Year-over-Year by Status</div><canvas id="cC3"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"><span class="td"></span><span id="tmsg"></span></div>
+
+  <script>
+    /* ===== CONSTANTS ===== */
+    var MABB = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    var MFULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    var PAGE_SIZE = 50;
+    var STATUSES = ['Close Shorted', 'Cancelled', 'Unreleased', 'In Progress', 'Completed'];
+    var SC = {
+      'Close Shorted': { bg: 'rgba(26,111,196,.82)', bd: '#1a6fc4', lite: 'rgba(26,111,196,.12)' },
+      'Cancelled': { bg: 'rgba(239,68,68,.82)', bd: '#dc2626', lite: 'rgba(239,68,68,.12)' },
+      'Unreleased': { bg: 'rgba(245,158,11,.82)', bd: '#d97706', lite: 'rgba(245,158,11,.12)' },
+      'In Progress': { bg: 'rgba(217,119,6,.82)', bd: '#d97706', lite: 'rgba(217,119,6,.12)' },
+      'Completed': { bg: 'rgba(30,158,87,.82)', bd: '#1e9e57', lite: 'rgba(30,158,87,.12)' }
+    };
+    var UC = {
+      'DCD': { bg: 'rgba(217,119,6,0.8)', bd: '#d97706' },
+      'IMD': { bg: 'rgba(30,158,87,0.8)', bd: '#1e9e57' },
+      'TRD': { bg: 'rgba(26,111,196,0.8)', bd: '#1a6fc4' }
+    };
+
+    /* ===== STATE ===== */
+    var allData = [];
+    var completeData = [];
+    var pendingData = [];
+    var detailData = [];
+    var detailPage = 1;
+    var tab2Data = [];
+    var CH = {};
+
+    /* ===== NAVIGATION ===== */
+    function goTab(i) {
+      document.querySelectorAll('.tab').forEach(function (t, j) { t.classList.toggle('on', i === j); });
+      document.querySelectorAll('.pg').forEach(function (p, j) { p.classList.toggle('on', i === j); });
+    }
+
+    /* ===== FILE LOADING ===== */
+    function onFile(e) {
+      var f = e.target.files[0];
+      if (!f) return;
+      e.target.value = '';
+      var rd = new FileReader();
+      rd.onload = function (ev) {
+        try {
+          var wb = XLSX.read(ev.target.result, { type: 'array', cellDates: false });
+          parseFile(wb, f.name);
+        } catch (ex) {
+          toast('Parse error: ' + ex.message, 'er');
+          console.error(ex);
+        }
+      };
+      rd.onerror = function () { toast('Cannot read file.', 'er'); };
+      rd.readAsArrayBuffer(f);
+    }
+
+    function parseFile(wb, fname) {
+      console.log('=== PARSING ' + fname + ' ===');
+      if (fname.toLowerCase().includes('production')) {
+        parseProductionOrder(wb);
+        toast('Production Orders Loaded for Details Tab', 'ok');
+        return;
+      }
+      // 'details' tab-ah thedum, illana first sheet-ah edukkum
+      var sn = wb.SheetNames.find(name => name.toLowerCase() === 'details') || wb.SheetNames[0];
+      console.log('Sheet:', sn);
+      var raw = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+      console.log('Raw rows:', raw.length, 'Sample:', JSON.stringify(raw.slice(0, 3)));
+
+      if (raw.length < 2) { toast('Sheet is empty or has no data rows.', 'er'); return; }
+
+      /* Normalize header names */
+      var hdr = raw[0].map(function (h) {
+        return String(h)
+          .toLowerCase()
+          .replace(/[\n\r]/g, ' ')
+          .replace(/[."']/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+      });
+      console.log('Normalized headers:', hdr);
+
+      /* Find column index by partial name match */
+      function ci(names, fallback) {
+        if (!Array.isArray(names)) names = [names];
+        for (var n = 0; n < names.length; n++) {
+          if (!names[n]) continue;
+          var key = String(names[n]).toLowerCase();
+          for (var i = 0; i < hdr.length; i++) {
+            if (typeof hdr[i] === 'string' && hdr[i].indexOf(key) !== -1) return i;
+          }
+        }
+        return (fallback !== undefined) ? fallback : -1;
+      }
+
+      var IX = {
+        no: ci(['ord no', 'order no'], 0),
+        item: ci(['item'], 1),
+        desc: ci(['item desc', 'item description'], 2),
+        od: ci(['ord date', 'order date'], 4),
+        status: ci(['status'], -1),
+        unit: ci(['unit'], -1),
+        qty: ci(['order qty', 'qty'], 9),
+        period: ci(['period', 'month'], 16),
+        year: ci(['year'], 20)
+      };
+      console.log('Column mapping:', IX);
+
+
+function parseProductionOrder(wb) {
+        var sn = wb.SheetNames.find(n => n.toLowerCase() === 'details') || wb.SheetNames[0];
+        console.log('📊 Production Sheet:', sn);
+        var raw = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, defval: '' });
+        console.log('📊 Raw rows:', raw.length);
+
+        if (raw.length < 2) {
+          console.warn('⚠️ No data rows in production sheet');
+          return;
+        }
+
+        // 🔧 DYNAMIC HEADER NORMALIZATION (copied from parseFile)
+        var hdr = raw[0].map(function (h) {
+          return String(h)
+            .toLowerCase()
+            .replace(/[\n\r]/g, ' ')
+            .replace(/[."']/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        });
+        console.log('📊 Headers:', hdr.slice(0, 20), '...');
+
+        // 🔍 PRODUCTION-SPECIFIC COLUMN FINDER
+        function ci(names) {
+          if (!Array.isArray(names)) names = [names];
+          for (var n = 0; n < names.length; n++) {
+            var key = String(names[n]).toLowerCase();
+            for (var i = 0; i < hdr.length; i++) {
+              if (typeof hdr[i] === 'string' && hdr[i].indexOf(key) !== -1) return i;
+            }
+          }
+          return -1;
+        }
+
+        var IX = {
+          unit: ci(['unit', 'division', 'dcd', 'imd', 'trd']),
+          orderNo: ci(['order', 'ord no', 'po no', 'order#']),
+          orderDt: ci(['date', 'ord date', 'order date']),
+          item: ci(['item', 'item code', 'part no', 'material']),
+          desc: ci(['desc', 'description', 'item desc', 'item name']),
+          process: ci(['process', 'operation', 'proc', 'work center', 'workstation']),
+          qty: ci(['qty', 'quantity', 'queue qty', 'order qty'])
+        };
+        console.log('🔍 Production columns found:', IX);
+
+        tab2Data = []; // Clear old data
+        var validCount = 0;
+        var totalRows = raw.length - 1;
+
+        for (var i = 1; i < raw.length; i++) {
+          var r = raw[i];
+          var no = IX.orderNo >= 0 ? String(r[IX.orderNo] || '').trim() : '';
+          
+          if (!no) continue; // Skip empty Order No
+
+          var unit = IX.unit >= 0 ? String(r[IX.unit] || '') : '';
+          var od = IX.orderDt >= 0 ? String(r[IX.orderDt] || '') : '';
+          var item = IX.item >= 0 ? String(r[IX.item] || '') : '';
+          var desc = IX.desc >= 0 ? String(r[IX.desc] || '') : '';
+          var qty = IX.qty >= 0 ? parseFloat(r[IX.qty] || 0) : 0;
+
+          var dt = parseD(od) || new Date(od);
+          var day = dt ? String(dt.getDate()).padStart(2, '0') : '';
+
+          tab2Data.push({
+            unit: unit,
+            no: no.toUpperCase(),
+            od: od,
+            day: day,
+            yr: extractYear('', od),
+            mo: extractMonth('', od),
+            item: item,
+            desc: desc,
+            process: IX.process >= 0 ? String(r[IX.process] || '') : '',
+            qty: qty,
+            rowIndex: i
+          });
+          validCount++;
+        }
+        
+        console.log(`✅ Production Orders: Parsed ${validCount}/${totalRows} rows | Sample:`, tab2Data.slice(0, 2));
+        toast(`Production Orders: ${validCount} rows loaded`, 'ok');
+        renderDetails();
+      }
+
+      function groupByOrder(data) {
+        var map = {};
+
+        data.forEach(function (r) {
+          if (!map[r.no]) {
+            map[r.no] = {
+              no: r.no,
+              od: r.od,
+              unit: r.unit,
+              items: []
+            };
+          }
+          map[r.no].items.push(r);
+        });
+
+        return Object.values(map);
+      }
+      console.log(tab2Data);
+
+      /* Validate critical columns were found */
+      if (IX.status === -1) { toast('Could not find "Status" column in: ' + fname, 'er'); return; }
+      if (IX.unit === -1) { toast('Could not find "Unit" column in: ' + fname, 'er'); return; }
+
+      /* Determine source type from filename */
+      var isComplete = fname.toLowerCase().indexOf('complete') !== -1;
+      var sourceData = isComplete ? completeData : pendingData;
+
+      var finalData = [];
+      var validCount = 0;
+      
+      for (var i = 1; i < raw.length; i++) {
+        var r = raw[i];
+        if (!r || r.length === 0) continue;
+
+        var rawSt = String(r[IX.status] || '').trim();
+        var status = normalizeStatus(rawSt);
+        var unit = normalizeUnit(String(r[IX.unit] || '').trim());
+        var no = String(r[IX.no] || '').trim();
+
+        if (!no || status === '' || !unit) continue;
+
+        var od = String(r[IX.od] || '').trim();
+        var dt = parseD(od);
+        var qty = parseFloat(r[IX.qty]) || 0;
+
+        /* Extract year from dedicated year column or order date */
+        var yr = extractYear(String(r[IX.year] || '').trim(), od);
+
+        /* Extract month from period column or order date */
+        var mo = extractMonth(String(r[IX.period] || '').trim(), od);
+
+        /* Extract day from parsed date */
+        var day = dt ? String(dt.getDate()).padStart(2, '0') : '';
+
+        // ✅ PRESERVE ALL DUPLICATE ORDER NUMBERS - Every Excel row becomes a record
+        finalData.push({
+          no: no, od: od,
+          item: String(r[IX.item] || '').trim(),
+          desc: String(r[IX.desc] || '').trim(),
+          unit: unit, status: status, qty: qty,
+          yr: yr, mo: mo, day: day,
+          rowIndex: i  // Original Excel row number (for debugging duplicates)
+        });
+        validCount++;
+      }
+      
+      console.log(`✅ Parsed ${validCount} rows (incl. duplicates) from ${fname}`);
+
+      /* Store into source bucket */
+      if (isComplete) {
+        completeData = finalData;
+      } else {
+        pendingData = finalData;
+      }
+
+      /* Merge for dashboard views */
+      allData = completeData.concat(pendingData);
+
+      console.log('Parsed:', validCount, 'valid | Merged allData:', allData.length);
+      console.table(STATUSES.map(function (s) {
+        var subset = allData.filter(function (r) { return r.status === s; });
+        return { status: s, count: subset.length, total_qty: subset.reduce(function (sum, r) { return sum + r.qty; }, 0) };
+      }));
+
+      /* Update upload button appearance */
+      var btnId = isComplete ? 'btnComp' : 'btnPend';
+      var btnEl = document.getElementById(btnId);
+      if (btnEl) {
+        btnEl.textContent = isComplete ? '✅ Complete Orders Loaded' : '✅ Pending Orders Loaded';
+        btnEl.classList.add('loaded');
+      }
+
+      var totalQty = allData.reduce(function (s, r) { return s + r.qty; }, 0);
+      toast(allData.length.toLocaleString() + ' orders | ' + totalQty.toLocaleString() + ' Qty from "' + fname + '"', 'ok');
+
+      if (allData.length === 0) {
+        toast('⚠ No valid data parsed from ' + fname + '. Check console (F12).', 'er');
+      }
+
+      tryRender();
+    }
+
+    /* ===== NORMALIZATION HELPERS ===== */
+    function normalizeUnit(raw) {
+      if (!raw) return '';
+      raw = raw.toLowerCase().trim();
+      if (raw.indexOf('die casting division') !== -1) return 'DCD';
+      if (raw.indexOf('die cast') !== -1) return 'DCD';
+      if (raw.indexOf('imd') !== -1) return 'IMD';
+      if (raw.indexOf('trd') !== -1) return 'TRD';
+      var m = raw.match(/\(([^)]+)\)/);
+      if (m) return m[1].trim().toUpperCase();
+      return raw.slice(0, 3).toUpperCase();
+    }
+
+    function normalizeStatus(raw) {
+      if (!raw) return '';
+      var s = raw.trim().toLowerCase();
+      if (s.indexOf('progress') !== -1) return 'In Progress';
+      if (s.indexOf('complet') !== -1) return 'Completed';
+      if (s.indexOf('close short') !== -1 || s === 'pending') return 'Close Shorted';
+      if (s.indexOf('cancel') !== -1) return 'Cancelled';
+      if (s.indexOf('unreleas') !== -1) return 'Unreleased';
+      return raw.trim() || '';
+    }
+
+    function extractYear(yrRaw, od) {
+      if (!yrRaw) { var d1 = parseD(od); return d1 ? String(d1.getFullYear()) : ''; }
+      yrRaw = yrRaw.trim();
+      /* Handle "202526" style period codes — take first 4 digits */
+      if (/^\d{5,6}$/.test(yrRaw)) return yrRaw.slice(0, 4);
+      if (/^\d{4}$/.test(yrRaw)) return yrRaw;
+      var d2 = parseD(od);
+      return d2 ? String(d2.getFullYear()) : '';
+    }
+
+    function extractMonth(perRaw, od) {
+      if (!perRaw) { var d1 = parseD(od); return d1 ? String(d1.getMonth() + 1) : ''; }
+      perRaw = perRaw.trim();
+      /* Try numeric month */
+      var n = parseInt(perRaw, 10);
+      if (!isNaN(n) && n >= 1 && n <= 12) return String(n);
+      /* Try 3-letter month abbreviation */
+      var idx = MABB.findIndex(function (m) { return perRaw.slice(0, 3).toLowerCase() === m.toLowerCase(); });
+      if (idx >= 0) return String(idx + 1);
+      /* Try full month name */
+      var fidx = MFULL.findIndex(function (m) { return perRaw.toLowerCase() === m.toLowerCase(); });
+      if (fidx >= 0) return String(fidx + 1);
+      /* Handle period codes like "202526" — extract month portion */
+      if (/^\d{5,6}$/.test(perRaw)) {
+        /* e.g., "202526" → month "02" (digits 5-6), "202512" → "12" */
+        if (perRaw.length >= 6) {
+          var mPart = perRaw.slice(4, 6);
+          var mNum = parseInt(mPart, 10);
+          if (mNum >= 1 && mNum <= 12) return String(mNum);
+        }
+      }
+      var d2 = parseD(od);
+      return d2 ? String(d2.getMonth() + 1) : '';
+    }
+
+    function parseD(s) {
+      if (!s) return null;
+      s = String(s).trim();
+      /* DD-MMM-YY or DD-MMM-YYYY */
+      var m = s.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{2,4})$/);
+      if (m) {
+        var mn = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+        var mo = mn[m[2].toLowerCase()];
+        var yr = parseInt(m[3], 10);
+        if (yr < 100) yr += 2000;
+        if (mo !== undefined) return new Date(yr, mo, parseInt(m[1], 10));
+      }
+      /* DD/MM/YYYY or DD.MM.YYYY */
+      var m2 = s.match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})$/);
+      if (m2) return new Date(parseInt(m2[3], 10), parseInt(m2[2], 10) - 1, parseInt(m2[1], 10));
+      /* YYYY-MM-DD */
+      var m3 = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+      if (m3) return new Date(parseInt(m3[1], 10), parseInt(m3[2], 10) - 1, parseInt(m3[3], 10));
+      /* Generic Date parse */
+      var d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    /* ===== RENDER TRIGGER ===== */
+    function tryRender() {
+      document.getElementById('pg0-upload').style.display = 'none';
+      document.getElementById('pg0-body').style.display = 'block';
+      document.getElementById('tsLbl').textContent = new Date().toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+      });
+      populateFilters();
+      renderOverview();
+      renderDetails();
+      renderChartsTab();
+    }
+
+    /* ===== AUTO-LOAD ===== */
+    function autoLoad() {
+      toast('Auto-loading Excel files...', 'in');
+      var p1 = fetchXLSX('Complete order.xlsx');
+      var p2 = fetchXLSX('production-order.xlsx');
+
+      Promise.allSettled([p1, p2]).then(function (results) {
+        var loadedAny = false;
+        results.forEach(function (res) {
+          if (res.status === 'fulfilled' && res.value && res.value.wb) {
+            parseFile(res.value.wb, res.value.filename);
+            loadedAny = true;
+          } else if (res.status === 'rejected') {
+            console.warn('File not found:', res.reason);
+          }
+        });
+
+        if (loadedAny) {
+          toast('Auto-load complete! Dashboard ready.', 'ok');
+        } else {
+          toast('Auto-load failed. Use manual upload buttons.', 'er');
+          document.getElementById('pg0-upload').style.display = 'block';
+          document.getElementById('pg0-body').style.display = 'none';
+        }
+      }).catch(function (ex) {
+        toast('Auto-load failed. Use manual upload buttons.', 'er');
+        console.error(ex);
+        document.getElementById('pg0-upload').style.display = 'block';
+        document.getElementById('pg0-body').style.display = 'none';
+      });
+    }
+
+    function fetchXLSX(filename) {
+      return fetch(filename).then(function (r) {
+        if (!r.ok) throw new Error('File not found: ' + filename);
+        return r.arrayBuffer();
+      }).then(function (ab) {
+        var wb = XLSX.read(ab, { type: 'array' });
+        return { wb: wb, filename: filename };
+      });
+    }
+
+    /* ===== POPULATE FILTERS ===== */
+    function populateFilters() {
+      var units = uniq(allData.map(function (r) { return r.unit; }).filter(Boolean)).sort();
+      var years = uniq(allData.map(function (r) { return r.yr; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+      var months = uniq(allData.map(function (r) { return r.mo; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+      var days = uniq(allData.map(function (r) { return r.day; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+
+      var uO = '<option value="all">All Units</option>' + units.map(function (u) { return '<option value="' + u + '">' + u + '</option>'; }).join('');
+      var yO = '<option value="all">All Years</option>' + years.map(function (y) { return '<option value="' + y + '">' + y + '</option>'; }).join('');
+      var mO = '<option value="all">All Months</option>' + months.map(function (m) { return '<option value="' + m + '">' + (MABB[(+m) - 1] || m) + '</option>'; }).join('');
+      var dO = '<option value="all">All Days</option>' + days.map(function (d) { return '<option value="' + d + '">Day ' + d + '</option>'; }).join('');
+
+      ['f0Unit', 'f3Unit', 'f4Unit'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.innerHTML = uO;
+      });
+      ['f0Year', 'f3Year', 'f4Year'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.innerHTML = yO;
+      });
+      ['f0Month', 'f3Month'].forEach(function (id) {
+        var el = document.getElementById(id); if (el) el.innerHTML = mO;
+      });
+      var f0d = document.getElementById('f0Day'); if (f0d) f0d.innerHTML = dO;
+
+      var f3d = document.getElementById('f3Day'); if (f3d) f3d.innerHTML = dO;
+
+      ['f4Month'].forEach(function(id) {
+       var el = document.getElementById(id); if (el) el.innerHTML = mO;
+      });
+      ['f4Day'].forEach(function(id) {
+      var el = document.getElementById(id); if (el) el.innerHTML = dO;
+      });
+    }
+
+    /* ===== FILTER HELPERS ===== */
+    function gv(id) { var el = document.getElementById(id); return el ? el.value : 'all'; }
+
+    /* Overview filters from completeData only */
+    function getFilteredOverview() {
+      var u = gv('f0Unit'), y = gv('f0Year'), m = gv('f0Month'), d = gv('f0Day');
+      return completeData.filter(function (r) {
+        return (u === 'all' || r.unit === u) &&
+          (y === 'all' || r.yr === y) &&
+          (m === 'all' || r.mo === m) &&
+          (d === 'all' || r.day === d);
+      });
+    }
+
+    /* Generic filter for allData (Details + Charts tabs) */
+  function getFilteredAll(uId, yId, mId, sId, dId) {
+  var u = uId ? gv(uId) : 'all';
+  var y = yId ? gv(yId) : 'all';
+  var m = mId ? gv(mId) : 'all';
+  var s = sId ? gv(sId) : 'all';
+  var d = dId ? gv(dId) : 'all';
+
+  return allData.filter(function(r) {
+    return (u === 'all' || r.unit === u) &&
+           (y === 'all' || r.yr === y) &&
+           (m === 'all' || r.mo === m) &&
+           (d === 'all' || r.day === d) &&
+           (s === 'all' || r.status === s);
+  });
+}
+
+    /* ===== TAB 1 — OVERVIEW ===== */
+    function renderOverview() {
+      var d = getFilteredOverview();
+      var total = d.length;
+
+      function byS(s) { return d.filter(function (r) { return r.status === s; }).length; }
+
+      var units = uniq(d.map(function (r) { return r.unit; })).sort();
+
+      /* KPIs */
+      document.getElementById('kpiRow').innerHTML = [
+        { cls: 'total', label: 'Total Orders', val: total, sub: total.toLocaleString() + ' orders' },
+        { cls: 'comp', label: 'Completed', val: byS('Completed'), sub: byS('Completed').toLocaleString() + ' orders' },
+        { cls: 'prog', label: 'In Progress', val: byS('In Progress'), sub: byS('In Progress').toLocaleString() + ' orders' },
+        { cls: 'pend', label: 'Close Shorted', val: byS('Close Shorted'), sub: byS('Close Shorted').toLocaleString() + ' orders' },
+        { cls: 'unrl', label: 'Unreleased', val: byS('Unreleased'), sub: byS('Unreleased').toLocaleString() + ' orders' },
+        { cls: 'cncl', label: 'Cancelled', val: byS('Cancelled'), sub: byS('Cancelled').toLocaleString() + ' orders' }
+      ].map(function (k) {
+        return '<div class="kpi ' + k.cls + '"><div class="kl">' + k.label + '</div><div class="kv">' + k.val.toLocaleString() + '</div><div class="ks">' + k.sub + '</div></div>';
+      }).join('');
+
+      /* Unit summary boxes */
+      document.getElementById('unitBoxes').innerHTML = units.map(function (u) {
+        var ud = d.filter(function (r) { return r.unit === u; });
+        var comp = ud.filter(function (r) { return r.status === 'Completed'; }).length;
+        var prog = ud.filter(function (r) { return r.status === 'In Progress'; }).length;
+        return '<div class="ubox ubox-' + u + '">' +
+          '<div class="uname">' + u + '</div>' +
+          '<div class="ustats">' +
+          '<div class="ustat prog"><div class="uv">' + prog + '</div><div class="ul">In Progress</div></div>' +
+          '<div class="ustat comp"><div class="uv">' + comp + '</div><div class="ul">Completed</div></div>' +
+          '</div></div>';
+      }).join('');
+
+      /* Status Distribution Donut */
+      killChart('cOvDonut');
+      CH['cOvDonut'] = new Chart(document.getElementById('cOvDonut'), {
+        type: 'doughnut',
+        data: {
+          labels: ['In Progress', 'Completed'],
+          datasets: [{
+            data: [byS('In Progress'), byS('Completed')],
+            backgroundColor: [SC['In Progress'].bg, SC['Completed'].bg],
+            borderColor: [SC['In Progress'].bd, SC['Completed'].bd],
+            borderWidth: 2
+          }]
+        },
+        options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+      });
+
+      /* Unit Status grouped bar */
+      var unitStatuses = ['Close Shorted', 'In Progress', 'Completed'];
+      killChart('cOvUnitStatus');
+      CH['cOvUnitStatus'] = new Chart(document.getElementById('cOvUnitStatus'), {
+        type: 'bar',
+        data: {
+          labels: units,
+          datasets: unitStatuses.map(function (status) {
+            return {
+              label: status,
+              data: units.map(function (u) { return d.filter(function (r) { return r.unit === u && r.status === status; }).length; }),
+              backgroundColor: SC[status].bg,
+              borderColor: SC[status].bd,
+              borderWidth: 2
+            };
+          })
+        },
+        options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } }, scales: { x: { stacked: false }, y: { beginAtZero: true, ticks: { callback: function (v) { return v.toLocaleString(); } } } } }
+      });
+
+      /* Unit Bar */
+      killChart('cOvUnitBar');
+      CH['cOvUnitBar'] = new Chart(document.getElementById('cOvUnitBar'), {
+        type: 'bar',
+        data: {
+          labels: units,
+          datasets: [{
+            label: 'Order Count',
+            data: units.map(function (u) { return d.filter(function (r) { return r.unit === u; }).length; }),
+            backgroundColor: units.map(function (u) { return (UC[u] && UC[u].bd) || '#9ca3af'; }),
+            borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: bOpts()
+      });
+
+      /* Year Bar */
+      var yrs = uniq(d.map(function (r) { return r.yr; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+      killChart('cOvYearBar');
+      CH['cOvYearBar'] = new Chart(document.getElementById('cOvYearBar'), {
+        type: 'bar',
+        data: {
+          labels: yrs,
+          datasets: [{
+            label: 'Order Count',
+            data: yrs.map(function (y) { return d.filter(function (r) { return r.yr === y; }).length; }),
+            backgroundColor: SC['Completed'].bg, borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: bOpts()
+      });
+
+      /* Month Bar */
+      var mkeys = sortedMKeys(d);
+      killChart('cOvMonthBar');
+      CH['cOvMonthBar'] = new Chart(document.getElementById('cOvMonthBar'), {
+        type: 'bar',
+        data: {
+          labels: mkeys.map(mkLabel),
+          datasets: [{
+            label: 'Order Count',
+            data: mkeys.map(function (k) { var parts = k.split('|'); return d.filter(function (r) { return r.mo === parts[0] && r.yr === parts[1]; }).length; }),
+            backgroundColor: SC['Completed'].bg, borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: bOpts(true)
+      });
+
+      /* Day Bar */
+      var dys = uniq(d.map(function (r) { return r.day; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+      killChart('cOvDayBar');
+      CH['cOvDayBar'] = new Chart(document.getElementById('cOvDayBar'), {
+        type: 'bar',
+        data: {
+          labels: dys.map(function (dd) { return 'Day ' + dd; }),
+          datasets: [{
+            label: 'Order Count',
+            data: dys.map(function (dd) { return d.filter(function (r) { return r.day === dd; }).length; }),
+            backgroundColor: SC['Completed'].bg, borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: bOpts(true)
+      });
+    }
+
+
+    /* ===== TAB 2 — DETAILS ===== */
+    function renderDetails() {
+      var u = gv('f3Unit'), y = gv('f3Year'), m = gv('f3Month'), d = gv('f3Day');
+
+      // Filter by Unit, Year, Month, Day
+      detailData = tab2Data.filter(function (r) {
+        return (u === 'all' || r.unit === u) &&
+          (y === 'all' || r.yr === y) &&
+          (m === 'all' || r.mo === m) &&
+          (d === 'all' || r.day === d);
+      });
+
+      detailPage = 1;
+      document.getElementById('detailTitle').textContent =
+        detailData.length.toLocaleString() + " Production Records Found";
+
+      drawDetailTable();
+    }
+
+    function drawDetailTable() {
+      var start = (detailPage - 1) * PAGE_SIZE;
+      var rows = detailData.slice(start, start + PAGE_SIZE);
+      var tb = document.getElementById('detailTB');
+
+      if (!rows.length) {
+        tb.innerHTML = '<tr><td colspan="6"><div class="empty"><div class="ei">?</div><p>No records found.</p></div></td></tr>';
+        document.getElementById('detailTF').innerHTML = '';
+      } else {
+        tb.innerHTML = rows.map(function (r, i) {
+          return '<tr>' +
+            '<td style="color:var(--dim);font-size:11px">' + (start + i + 1) + '</td>' +
+            '<td style="font-weight:700">' + esc(r.no || 'N/A') + '</td>' +
+            '<td style="white-space:nowrap">' + esc(r.od || 'N/A') + '</td>' +
+            '<td>' + esc(r.item || 'N/A') + '</td>' + 
+            '<td style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escAttr(r.desc || 'N/A') + '">' + esc(r.desc || 'N/A') + '</td>' +
+            '<td title="' + escAttr(r.process || '') + '">' + esc(r.process || 'N/A') + '</td>' +
+            '<td class="nr" style="font-weight:700">' + (r.qty || 0).toLocaleString() + '</td>' +
+            '</tr>';
+        }).join('');
+
+        var totQty = detailData.reduce(function (s, r) { return s + (r.qty || 0); }, 0);
+
+        document.getElementById('detailTF').innerHTML =
+          '<tr>' +
+          '<td colspan="5" style="text-align:left">' + detailData.length.toLocaleString() + ' records total</td>' +
+          '<td class="nr">' + totQty.toLocaleString() + '</td>' +
+          '</tr>';
+      }
+
+      pgr('detailPgr', detailData.length, detailPage, function (p) {
+        detailPage = p;
+        drawDetailTable();
+      });
+    }
+
+    /* ===== TAB 3 — CHARTS ===== */
+    function renderChartsTab() {
+      var d = getFilteredAll('f4Unit', 'f4Year', 'f4Month', null, 'f4Day');
+      var units = uniq(allData.map(function (r) { return r.unit; })).sort();
+      var years = uniq(allData.map(function (r) { return r.yr; }).filter(Boolean)).sort(function (a, b) { return (+a) - (+b); });
+      var mkeys = sortedMKeys(d);
+      var total = d.length;
+
+      /* Overall Status Donut */
+      killChart('cC1');
+      CH['cC1'] = new Chart(document.getElementById('cC1'), {
+        type: 'doughnut',
+        data: {
+          labels: STATUSES,
+          datasets: [{
+            data: STATUSES.map(function (s) { return d.filter(function (r) { return r.status === s; }).length; }),
+            backgroundColor: STATUSES.map(function (s) { return SC[s].bd; }),
+            borderColor: '#fff', borderWidth: 3, hoverOffset: 8
+          }]
+        },
+        options: {
+          responsive: true, cutout: '62%',
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10 } },
+            tooltip: { callbacks: { label: function (c) { return ' ' + c.label + ': ' + c.raw.toLocaleString() + ' (' + pct(c.raw, total) + ')'; } } }
+          }
+        }
+      });
+
+      /* Unit-wise Status Comparison */
+      killChart('cC2');
+      CH['cC2'] = new Chart(document.getElementById('cC2'), {
+        type: 'bar',
+        data: {
+          labels: units,
+          datasets: STATUSES.map(function (s) {
+            return {
+              label: s,
+              data: units.map(function (u) { return d.filter(function (r) { return r.unit === u && r.status === s; }).length; }),
+              backgroundColor: SC[s].bg, borderColor: SC[s].bd, borderWidth: 1, borderRadius: 3
+            };
+          })
+        },
+        options: bOpts()
+      });
+
+      /* In Progress by Unit */
+      killChart('cC5');
+      CH['cC5'] = new Chart(document.getElementById('cC5'), {
+        type: 'bar',
+        data: {
+          labels: units,
+          datasets: [{
+            label: 'In Progress',
+            data: units.map(function (u) { return d.filter(function (r) { return r.unit === u && r.status === 'In Progress'; }).length; }),
+            backgroundColor: SC['In Progress'].bg, borderColor: SC['In Progress'].bd, borderWidth: 1, borderRadius: 4
+          }]
+        },
+        options: bOpts()
+      });
+
+      /* Monthly Pending vs Completed */
+      killChart('cC4');
+      CH['cC4'] = new Chart(document.getElementById('cC4'), {
+        type: 'bar',
+        data: {
+          labels: mkeys.map(mkLabel),
+          datasets: STATUSES.map(function (s) {
+            return {
+              label: s,
+              data: mkeys.map(function (k) {
+                var parts = k.split('|');
+                return d.filter(function (r) { return r.status === s && r.mo === parts[0] && r.yr === parts[1]; }).length;
+              }),
+              backgroundColor: SC[s].bg, borderColor: SC[s].bd, borderWidth: 1, borderRadius: 3
+            };
+          })
+        },
+        options: bOpts(true)
+      });
+
+      /* Year-over-Year by Status */
+      killChart('cC3');
+      CH['cC3'] = new Chart(document.getElementById('cC3'), {
+        type: 'line',
+        data: {
+          labels: years,
+          datasets: STATUSES.map(function (s) {
+            return {
+              label: s,
+              data: years.map(function (y) { return d.filter(function (r) { return r.yr === y && r.status === s; }).length; }),
+              borderColor: SC[s].bd, backgroundColor: SC[s].lite,
+              borderWidth: 2.2, pointRadius: 4, pointHoverRadius: 6, fill: false, tension: 0.35
+            };
+          })
+        },
+        options: bOpts()
+      });
+    }
+
+    /* ===== SHARED CHART/UTILITY HELPERS ===== */
+    function bOpts(rotate) {
+      return {
+        responsive: true,
+        plugins: {
+          legend: { position: 'top', labels: { font: { size: 11 }, padding: 10 } },
+          tooltip: { callbacks: { label: function (c) { return ' ' + (c.dataset ? c.dataset.label : c.label) + ': ' + (c.raw || 0).toLocaleString(); } } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 11 }, maxRotation: rotate ? 45 : 0 } },
+          y: { grid: { color: '#f0f0f0' }, ticks: { font: { size: 11 }, callback: function (v) { return v.toLocaleString(); } } }
+        }
+      };
+    }
+
+    function sortedMKeys(d) {
+      return uniq(d.map(function (r) { return r.mo + '|' + r.yr; }).filter(function (v) { return v !== '|'; }))
+        .sort(function (a, b) {
+          var am = a.split('|'), bm = b.split('|');
+          return (+am[1]) - (+bm[1]) || (+am[0]) - (+bm[0]);
+        });
+    }
+
+    function mkLabel(k) {
+      var parts = k.split('|');
+      return (MABB[(+parts[0]) - 1] || parts[0]) + (parts[1] ? " '" + parts[1].slice(2) : '');
+    }
+
+    function pct(n, t) { return t ? Math.round(n / t * 100) + '%' : '0%'; }
+
+    function killChart(id) { if (CH[id]) { CH[id].destroy(); delete CH[id]; } }
+
+    function uniq(arr) {
+      var seen = {}, out = [];
+      for (var i = 0; i < arr.length; i++) {
+        if (!seen[arr[i]]) { seen[arr[i]] = true; out.push(arr[i]); }
+      }
+      return out;
+    }
+
+    function pgr(id, total, cur, cb) {
+      var el = document.getElementById(id);
+      var pages = Math.ceil(total / PAGE_SIZE);
+      if (pages <= 1) { el.innerHTML = '<span class="pi">' + total.toLocaleString() + ' records</span>'; return; }
+      el.innerHTML = '';
+      function mk(label, page, disabled, active) {
+        var btn = document.createElement('button');
+        btn.textContent = label;
+        btn.disabled = !!disabled;
+        if (active) btn.classList.add('cur');
+        if (!disabled) btn.addEventListener('click', function () { cb(page); });
+        el.appendChild(btn);
+      }
+      mk('‹', cur - 1, cur === 1, false);
+      var s = Math.max(1, cur - 3), e = Math.min(pages, s + 6);
+      if (e - s < 6) s = Math.max(1, e - 6);
+      for (var p = s; p <= e; p++) mk(String(p), p, false, p === cur);
+      mk('›', cur + 1, cur === pages, false);
+      var info = document.createElement('span');
+      info.className = 'pi';
+      info.textContent = total.toLocaleString() + ' records \u00B7 Page ' + cur + '/' + pages;
+      el.appendChild(info);
+    }
+
+    function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+    function escAttr(s) { return String(s || '').replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+
+    var _tt;
+    function toast(msg, type) {
+      type = type || 'in';
+      var el = document.getElementById('toast');
+      el.className = type;
+      document.getElementById('tmsg').textContent = msg;
+      el.classList.add('show');
+      clearTimeout(_tt);
+      _tt = setTimeout(function () { el.classList.remove('show'); }, 4000);
+    }
+
+    /* ===== BOOT ===== */
+    window.addEventListener('load', autoLoad);
+  </script>
+</body>
+
+</html>
